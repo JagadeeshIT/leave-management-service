@@ -19,20 +19,22 @@ import com.company.leave.service.LeaveService;
 public class ManagerLeaveController {
 
     private final LeaveService leaveService;
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    public ManagerLeaveController(LeaveService leaveService, UserRepository userRepository) {
+    public ManagerLeaveController(
+            LeaveService leaveService,
+            UserRepository userRepository
+    ) {
         this.leaveService = leaveService;
         this.userRepository = userRepository;
     }
-    
-    
+
     @GetMapping("/pending")
     public ResponseEntity<List<LeaveResponse>> getPendingLeaves() {
 
-        List<LeaveRequest> leaves = leaveService.getPendingLeaves();
+        List<LeaveRequest> leaves =
+                leaveService.getPendingLeaves();
 
-        // Fetch all users once (efficient)
         Map<Long, String> employeeNameMap =
                 userRepository.findAll()
                         .stream()
@@ -41,40 +43,41 @@ public class ManagerLeaveController {
                                 User::getName
                         ));
 
-        List<LeaveResponse> response = leaves.stream().map(leave -> {
-            LeaveResponse dto = new LeaveResponse();
-            dto.setLeaveId(leave.getId());
-            dto.setEmployee_id(leave.getEmployeeId());
-            dto.setEmployeeName(employeeNameMap.get(leave.getEmployeeId()));
-            dto.setStartDate(leave.getStartDate());
-            dto.setEndDate(leave.getEndDate());
-            dto.setStatus(leave.getStatus());
-
-            dto.setNumberOfDays(
-                    ChronoUnit.DAYS.between(
-                            leave.getStartDate(),
-                            leave.getEndDate()
-                    ) + 1
-            );
-
-            return dto;
-        }).toList();
+        List<LeaveResponse> response =
+                leaves.stream().map(leave -> {
+                    LeaveResponse dto = new LeaveResponse();
+                    dto.setLeaveId(leave.getId());
+                    dto.setEmployee_id(leave.getEmployeeId());
+                    dto.setEmployeeName(
+                            employeeNameMap.get(
+                                    leave.getEmployeeId()
+                            )
+                    );
+                    dto.setStartDate(leave.getStartDate());
+                    dto.setEndDate(leave.getEndDate());
+                    dto.setStatus(leave.getStatus());
+                    dto.setNumberOfDays(
+                            ChronoUnit.DAYS.between(
+                                    leave.getStartDate(),
+                                    leave.getEndDate()
+                            ) + 1
+                    );
+                    return dto;
+                }).toList();
 
         return ResponseEntity.ok(response);
     }
 
-
-    // APPROVE LEAVE
-
     @PutMapping("/{leaveId}/approve")
     public ResponseEntity<LeaveResponse> approveLeave(
-            @PathVariable Long leaveId) {
-
+            @PathVariable Long leaveId
+    ) {
         LeaveRequest approvedLeave =
                 leaveService.approveLeave(leaveId);
 
-        User user = userRepository.findById(approvedLeave.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(
+                approvedLeave.getEmployeeId()
+        ).orElseThrow(() -> new RuntimeException("User not found"));
 
         LeaveResponse response = new LeaveResponse();
         response.setLeaveId(approvedLeave.getId());
@@ -83,7 +86,6 @@ public class ManagerLeaveController {
         response.setStartDate(approvedLeave.getStartDate());
         response.setEndDate(approvedLeave.getEndDate());
         response.setStatus(approvedLeave.getStatus());
-
         response.setNumberOfDays(
                 ChronoUnit.DAYS.between(
                         approvedLeave.getStartDate(),
@@ -94,17 +96,16 @@ public class ManagerLeaveController {
         return ResponseEntity.ok(response);
     }
 
-    // REJECT LEAVE
-
     @PutMapping("/{leaveId}/reject")
     public ResponseEntity<LeaveResponse> rejectLeave(
-            @PathVariable Long leaveId) {
-
+            @PathVariable Long leaveId
+    ) {
         LeaveRequest rejectedLeave =
                 leaveService.rejectLeave(leaveId);
 
-        User user = userRepository.findById(rejectedLeave.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(
+                rejectedLeave.getEmployeeId()
+        ).orElseThrow(() -> new RuntimeException("User not found"));
 
         LeaveResponse response = new LeaveResponse();
         response.setLeaveId(rejectedLeave.getId());
@@ -113,7 +114,6 @@ public class ManagerLeaveController {
         response.setStartDate(rejectedLeave.getStartDate());
         response.setEndDate(rejectedLeave.getEndDate());
         response.setStatus(rejectedLeave.getStatus());
-
         response.setNumberOfDays(
                 ChronoUnit.DAYS.between(
                         rejectedLeave.getStartDate(),
@@ -123,6 +123,4 @@ public class ManagerLeaveController {
 
         return ResponseEntity.ok(response);
     }
-
-
 }

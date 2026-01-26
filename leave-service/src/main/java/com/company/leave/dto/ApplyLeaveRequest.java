@@ -10,7 +10,6 @@ import lombok.Data;
 @Data
 public class ApplyLeaveRequest {
 
-	
     @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
@@ -20,5 +19,4 @@ public class ApplyLeaveRequest {
     @NotBlank(message = "Reason is required")
     @Size(max = 100, message = "Only 100 characters were allowed")
     private String reason;
-    
 }

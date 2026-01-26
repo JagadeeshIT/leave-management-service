@@ -2,9 +2,8 @@ package com.company.leave.leave;
 
 public enum LeaveStatus {
 
-	PENDING,
+    PENDING,
     APPROVED,
     REJECTED,
     CANCELLED
-	
 }

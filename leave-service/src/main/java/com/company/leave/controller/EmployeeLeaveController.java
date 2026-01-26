@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import com.company.leave.dto.ApplyLeaveRequest;
@@ -21,28 +22,35 @@ import jakarta.validation.Valid;
 public class EmployeeLeaveController {
 
     private final LeaveService leaveService;
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-
-    public EmployeeLeaveController(LeaveService leaveService, UserRepository userRepository) {
+    public EmployeeLeaveController(
+            LeaveService leaveService,
+            UserRepository userRepository
+    ) {
         this.leaveService = leaveService;
         this.userRepository = userRepository;
     }
 
+    private Long getEmployeeId() {
+        return (Long) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal();
+    }
+
     @PostMapping
     public ResponseEntity<LeaveResponse> applyLeave(
-            @RequestParam Long employeeId,   // TEMP: will come from JWT later
-            @Valid @RequestBody ApplyLeaveRequest request) {
+            @Valid @RequestBody ApplyLeaveRequest request
+    ) {
+        Long employeeId = getEmployeeId();
 
-        // 1. Call service (service only saves leave)
         LeaveRequest savedLeave =
                 leaveService.applyLeave(employeeId, request);
 
-        // 2. Fetch user details for response
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 3. Build response DTO
         LeaveResponse response = new LeaveResponse();
         response.setLeaveId(savedLeave.getId());
         response.setEmployee_id(employeeId);
@@ -50,7 +58,6 @@ public class EmployeeLeaveController {
         response.setStartDate(savedLeave.getStartDate());
         response.setEndDate(savedLeave.getEndDate());
         response.setStatus(savedLeave.getStatus());
-
         response.setNumberOfDays(
                 ChronoUnit.DAYS.between(
                         savedLeave.getStartDate(),
@@ -63,51 +70,47 @@ public class EmployeeLeaveController {
                 .body(response);
     }
 
-
-    
     @GetMapping
-    public ResponseEntity<List<LeaveResponse>> getMyLeaves(
-            @RequestParam Long employeeId) {   // TEMP: from JWT later
+    public ResponseEntity<List<LeaveResponse>> getMyLeaves() {
+
+        Long employeeId = getEmployeeId();
 
         List<LeaveRequest> leaves =
                 leaveService.getLeavesByEmployee(employeeId);
 
-        // Fetch user once
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<LeaveResponse> response = leaves.stream().map(leave -> {
-            LeaveResponse dto = new LeaveResponse();
-            dto.setLeaveId(leave.getId());
-            dto.setEmployee_id(employeeId);
-            dto.setEmployeeName(user.getName());
-            dto.setStartDate(leave.getStartDate());
-            dto.setEndDate(leave.getEndDate());
-            dto.setStatus(leave.getStatus());
-
-            dto.setNumberOfDays(
-                    ChronoUnit.DAYS.between(
-                            leave.getStartDate(),
-                            leave.getEndDate()
-                    ) + 1
-            );
-
-            return dto;
-        }).toList();
+        List<LeaveResponse> response =
+                leaves.stream().map(leave -> {
+                    LeaveResponse dto = new LeaveResponse();
+                    dto.setLeaveId(leave.getId());
+                    dto.setEmployee_id(employeeId);
+                    dto.setEmployeeName(user.getName());
+                    dto.setStartDate(leave.getStartDate());
+                    dto.setEndDate(leave.getEndDate());
+                    dto.setStatus(leave.getStatus());
+                    dto.setNumberOfDays(
+                            ChronoUnit.DAYS.between(
+                                    leave.getStartDate(),
+                                    leave.getEndDate()
+                            ) + 1
+                    );
+                    return dto;
+                }).toList();
 
         return ResponseEntity.ok(response);
     }
 
-    
     @PutMapping("/{leaveId}/cancel")
     public ResponseEntity<LeaveResponse> cancelLeave(
-            @RequestParam Long employeeId,   // TEMP: from JWT later
-            @PathVariable Long leaveId) {
+            @PathVariable Long leaveId
+    ) {
+        Long employeeId = getEmployeeId();
 
         LeaveRequest cancelledLeave =
                 leaveService.cancelLeave(employeeId, leaveId);
 
-        // Fetch user
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -118,7 +121,6 @@ public class EmployeeLeaveController {
         response.setStartDate(cancelledLeave.getStartDate());
         response.setEndDate(cancelledLeave.getEndDate());
         response.setStatus(cancelledLeave.getStatus());
-
         response.setNumberOfDays(
                 ChronoUnit.DAYS.between(
                         cancelledLeave.getStartDate(),
@@ -128,8 +130,4 @@ public class EmployeeLeaveController {
 
         return ResponseEntity.ok(response);
     }
-
-
-
-    
 }

@@ -23,9 +23,6 @@ public class LeaveRequest {
 
     private Long employeeId;
 
-    //private String employeeName;
-    
-    
     private LocalDate startDate;
     private LocalDate endDate;
 
@@ -35,5 +32,4 @@ public class LeaveRequest {
     private LeaveStatus status;
 
     private LocalDateTime createdAt;
-
 }

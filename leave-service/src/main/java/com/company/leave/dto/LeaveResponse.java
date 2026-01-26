@@ -4,18 +4,17 @@ import java.time.LocalDate;
 
 import com.company.leave.leave.LeaveStatus;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-
 import lombok.Data;
 
 @Data
 @JsonPropertyOrder({
-    "leaveId",
-    "employee_id",
-    "employeeName",
-    "startDate",
-    "endDate",
-    "numberOfDays",
-    "status"
+        "leaveId",
+        "employee_id",
+        "employeeName",
+        "startDate",
+        "endDate",
+        "numberOfDays",
+        "status"
 })
 public class LeaveResponse {
 
@@ -26,6 +25,4 @@ public class LeaveResponse {
     private LocalDate endDate;
     private long numberOfDays;
     private LeaveStatus status;
-
-    
 }

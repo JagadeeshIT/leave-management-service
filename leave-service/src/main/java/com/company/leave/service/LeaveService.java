@@ -1,13 +1,5 @@
 package com.company.leave.service;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-
 import com.company.leave.dto.ApplyLeaveRequest;
 import com.company.leave.dto.DepartmentLeaveStatsResponse;
 import com.company.leave.exception.BusinessException;
@@ -17,172 +9,187 @@ import com.company.leave.leave.LeaveStatus;
 import com.company.leave.leave.User;
 import com.company.leave.repository.LeaveRequestRepository;
 import com.company.leave.repository.UserRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class LeaveService {
-	
-	private final LeaveRequestRepository leaveRequestRepository;
-	private final UserRepository userRepository;
-	
-	public LeaveService(LeaveRequestRepository leaveRequestRepository, UserRepository userRepository) {
-		this.leaveRequestRepository = leaveRequestRepository;
-		this.userRepository = userRepository;
-	}
-	
-	
-	//Employee Methods
-	
-	public LeaveRequest applyLeave(Long employeeId, ApplyLeaveRequest request) {
-		
-		User user = userRepository.findById(employeeId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException(
-	                            "User not found with id: " + employeeId
-	                    ));
 
-	    // 2. Business validation – date range
-	    if (request.getStartDate().isAfter(request.getEndDate())) {
-	        throw new BusinessException(
-	                "Start date cannot be after end date"
-	        );
-	    }
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final UserRepository userRepository;
 
-	    LeaveRequest leave = new LeaveRequest();
+    public LeaveService(
+            LeaveRequestRepository leaveRequestRepository,
+            UserRepository userRepository
+    ) {
+        this.leaveRequestRepository = leaveRequestRepository;
+        this.userRepository = userRepository;
+    }
 
-	    leave.setEmployeeId(employeeId);
-	    //leave.setEmployeeName(request.getEmployeeName()); 
+    public LeaveRequest applyLeave(Long employeeId, ApplyLeaveRequest request) {
 
-	    leave.setStartDate(request.getStartDate());
-	    leave.setEndDate(request.getEndDate());
-	    leave.setReason(request.getReason());
+        userRepository.findById(employeeId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id: " + employeeId
+                        )
+                );
 
-	    leave.setStatus(LeaveStatus.PENDING);
-	    leave.setCreatedAt(LocalDateTime.now());
+        if (request.getStartDate().isAfter(request.getEndDate())) {
+            throw new BusinessException(
+                    "Start date cannot be after end date"
+            );
+        }
 
-	    return leaveRequestRepository.save(leave);
-	}
+        LeaveRequest leave = new LeaveRequest();
+        leave.setEmployeeId(employeeId);
+        leave.setStartDate(request.getStartDate());
+        leave.setEndDate(request.getEndDate());
+        leave.setReason(request.getReason());
+        leave.setStatus(LeaveStatus.PENDING);
+        leave.setCreatedAt(LocalDateTime.now());
 
-	
-	public List<LeaveRequest> getLeavesByEmployee(Long employeeId) {
-	    return leaveRequestRepository.findByEmployeeId(employeeId);
-	}
-	
-	
+        return leaveRequestRepository.save(leave);
+    }
 
-	public LeaveRequest cancelLeave(Long employeeId, Long leaveId) {
+    public List<LeaveRequest> getLeavesByEmployee(Long employeeId) {
+        return leaveRequestRepository.findByEmployeeId(employeeId);
+    }
 
-	    LeaveRequest leave = leaveRequestRepository.findById(leaveId)
-	            .orElseThrow(() ->
-	                    new ResourceNotFoundException("Leave not found with id: " + leaveId));
+    public LeaveRequest cancelLeave(Long employeeId, Long leaveId) {
 
-	    // Ownership validation
-	    if (!leave.getEmployeeId().equals(employeeId)) {
-	        throw new BusinessException("You are not allowed to cancel this leave");
-	    }
+        LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Leave not found with id: " + leaveId
+                        )
+                );
 
-	    // Status validation
-	    if (leave.getStatus() != LeaveStatus.PENDING) {
-	        throw new BusinessException(
-	                "Only pending leaves can be cancelled. Current status: " + leave.getStatus());
-	    }
+        if (!leave.getEmployeeId().equals(employeeId)) {
+            throw new BusinessException(
+                    "You are not allowed to cancel this leave"
+            );
+        }
 
-	    leave.setStatus(LeaveStatus.CANCELLED);
-	    leave.setCreatedAt(LocalDateTime.now());
+        if (leave.getStatus() != LeaveStatus.PENDING) {
+            throw new BusinessException(
+                    "Only pending leaves can be cancelled. Current status: "
+                            + leave.getStatus()
+            );
+        }
 
-	    return leaveRequestRepository.save(leave);
-	}
+        leave.setStatus(LeaveStatus.CANCELLED);
+        leave.setCreatedAt(LocalDateTime.now());
 
-	
-	
-	//Manager Methods
-	
-	public List<LeaveRequest> getPendingLeaves() {
-	    return leaveRequestRepository.findByStatus(LeaveStatus.PENDING);
-	}
+        return leaveRequestRepository.save(leave);
+    }
 
-	public LeaveRequest approveLeave(Long leaveId) {
+    public List<LeaveRequest> getPendingLeaves() {
+        return leaveRequestRepository.findByStatus(LeaveStatus.PENDING);
+    }
 
-	    LeaveRequest leave = leaveRequestRepository.findById(leaveId)
-	            .orElseThrow(() -> new ResourceNotFoundException("Leave request not found"));
+    public LeaveRequest approveLeave(Long leaveId) {
 
-	    if (!leave.getStatus().equals(LeaveStatus.PENDING)) {
-	        throw new BusinessException("Only pending leaves can be approved");
-	    }
+        LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Leave request not found")
+                );
 
-	    leave.setStatus(LeaveStatus.APPROVED);
-	    return leaveRequestRepository.save(leave);
-	}
+        if (leave.getStatus() != LeaveStatus.PENDING) {
+            throw new BusinessException(
+                    "Only pending leaves can be approved"
+            );
+        }
 
-	public LeaveRequest rejectLeave(Long leaveId) {
+        leave.setStatus(LeaveStatus.APPROVED);
+        return leaveRequestRepository.save(leave);
+    }
 
-	    LeaveRequest leave = leaveRequestRepository.findById(leaveId)
-	            .orElseThrow(() -> new ResourceNotFoundException("Leave request not found"));
+    public LeaveRequest rejectLeave(Long leaveId) {
 
-	    if (!leave.getStatus().equals(LeaveStatus.PENDING)) {
-	        throw new BusinessException("Only pending leaves can be rejected");
-	    }
+        LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Leave request not found")
+                );
 
-	    leave.setStatus(LeaveStatus.REJECTED);
-	    return leaveRequestRepository.save(leave);
-	}
+        if (leave.getStatus() != LeaveStatus.PENDING) {
+            throw new BusinessException(
+                    "Only pending leaves can be rejected"
+            );
+        }
 
-	
-	//Admin Leave
-	
-	public List<DepartmentLeaveStatsResponse> getLeaveStatisticsByDepartment() {
+        leave.setStatus(LeaveStatus.REJECTED);
+        return leaveRequestRepository.save(leave);
+    }
 
-	    // 1. Fetch all leave requests
-	    List<LeaveRequest> leaves = leaveRequestRepository.findAll();
+    public List<DepartmentLeaveStatsResponse> getLeaveStatisticsByDepartment() {
 
-	    // 2. Fetch all users
-	    List<User> users = userRepository.findAll();
+        List<LeaveRequest> leaves = leaveRequestRepository.findAll();
+        List<User> users = userRepository.findAll();
 
-	    // 3. Build employeeId -> department map
-	    Map<Long, String> employeeDepartmentMap =
-	            users.stream()
-	                 .filter(u -> u.getDepartment() != null)
-	                 .collect(Collectors.toMap(
-	                     User::getId,
-	                     User::getDepartment
-	                 ));
+        Map<Long, String> employeeDepartmentMap =
+                users.stream()
+                        .filter(u -> u.getDepartment() != null)
+                        .collect(Collectors.toMap(
+                                User::getId,
+                                User::getDepartment
+                        ));
 
-	    // 4. Group leave requests by department using employeeId
-	    Map<String, List<LeaveRequest>> leavesByDepartment =
-	            leaves.stream()
-	                  .filter(l -> employeeDepartmentMap.containsKey(l.getEmployeeId()))
-	                  .collect(Collectors.groupingBy(
-	                      l -> employeeDepartmentMap.get(l.getEmployeeId())
-	                  ));
+        Map<String, List<LeaveRequest>> leavesByDepartment =
+                leaves.stream()
+                        .filter(l ->
+                                employeeDepartmentMap.containsKey(
+                                        l.getEmployeeId()
+                                )
+                        )
+                        .collect(Collectors.groupingBy(
+                                l ->
+                                        employeeDepartmentMap.get(
+                                                l.getEmployeeId()
+                                        )
+                        ));
 
-	    // 5. Build response
-	    List<DepartmentLeaveStatsResponse> response = new ArrayList<>();
+        List<DepartmentLeaveStatsResponse> response =
+                new ArrayList<>();
 
-	    for (Map.Entry<String, List<LeaveRequest>> entry : leavesByDepartment.entrySet()) {
+        for (Map.Entry<String, List<LeaveRequest>> entry :
+                leavesByDepartment.entrySet()) {
 
-	        String department = entry.getKey();
-	        List<LeaveRequest> deptLeaves = entry.getValue();
+            Map<LeaveStatus, Long> statusCount =
+                    entry.getValue().stream()
+                            .collect(Collectors.groupingBy(
+                                    LeaveRequest::getStatus,
+                                    Collectors.counting()
+                            ));
 
-	        // Count leave statuses in one pass
-	        Map<LeaveStatus, Long> statusCount =
-	                deptLeaves.stream()
-	                          .collect(Collectors.groupingBy(
-	                              LeaveRequest::getStatus,
-	                              Collectors.counting()
-	                          ));
+            DepartmentLeaveStatsResponse stats =
+                    new DepartmentLeaveStatsResponse();
 
-	        DepartmentLeaveStatsResponse stats = new DepartmentLeaveStatsResponse();
-	        stats.setDepartment(department);
-	        stats.setPending(statusCount.getOrDefault(LeaveStatus.PENDING, 0L));
-	        stats.setApproved(statusCount.getOrDefault(LeaveStatus.APPROVED, 0L));
-	        stats.setRejected(statusCount.getOrDefault(LeaveStatus.REJECTED, 0L));
+            stats.setDepartment(entry.getKey());
+            stats.setPending(
+                    statusCount.getOrDefault(
+                            LeaveStatus.PENDING, 0L
+                    )
+            );
+            stats.setApproved(
+                    statusCount.getOrDefault(
+                            LeaveStatus.APPROVED, 0L
+                    )
+            );
+            stats.setRejected(
+                    statusCount.getOrDefault(
+                            LeaveStatus.REJECTED, 0L
+                    )
+            );
 
-	        response.add(stats);
-	    }
+            response.add(stats);
+        }
 
-	    return response;
-	}
-
-
-
-
+        return response;
+    }
 }

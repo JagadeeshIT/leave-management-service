@@ -12,7 +12,7 @@ import java.security.Key;
 public class JwtUtil {
 
     private static final String SECRET =
-            "my-secret-key-my-secret-key-my-secret-key"; // ≥ 32 chars
+            "my-secret-key-my-secret-key-my-secret-key";
 
     private final Key key =
             Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
